@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Meal Planning Mobile App</string>
+    <string name="title_activity_main">Meal Planning Mobile App</string>
+    <string name="package_name">com.ndn.mpapp</string>
+    <string name="custom_url_scheme">com.ndn.mpapp</string>
+</resources>
