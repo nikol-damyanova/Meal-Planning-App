@@ -5,11 +5,6 @@ apply plugin: 'com.google.gms.google-services'
 android {
     namespace = "com.ndn.mpapp"
     compileSdk = rootProject.ext.compileSdkVersion
-    // Ensure Java compatibility uses JDK 17 (installed on this machine)
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
     defaultConfig {
         applicationId "com.ndn.mpapp"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -54,5 +49,13 @@ dependencies {
 }
 
 apply from: 'capacitor.build.gradle'
+
+android {
+    // Override the generated Capacitor Java 21 settings so Gradle compiles with the installed JDK 17.
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
 
 // The Google services plugin is applied via the plugins block above.
