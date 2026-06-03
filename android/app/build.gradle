@@ -1,12 +1,15 @@
-plugins {
-    id 'com.android.application'
-    // Apply the Google services Gradle plugin for Firebase
-    id 'com.google.gms.google-services'
-}
+apply plugin: 'com.android.application'
+// Apply the Google services Gradle plugin (resolved from root buildscript classpath)
+apply plugin: 'com.google.gms.google-services'
 
 android {
     namespace = "com.ndn.mpapp"
     compileSdk = rootProject.ext.compileSdkVersion
+    // Ensure Java compatibility uses JDK 17 (installed on this machine)
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
     defaultConfig {
         applicationId "com.ndn.mpapp"
         minSdkVersion rootProject.ext.minSdkVersion
