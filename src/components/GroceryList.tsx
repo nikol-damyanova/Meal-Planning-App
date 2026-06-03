@@ -1,19 +1,38 @@
 import { useEffect, useRef, useState } from 'react';
 import { Plus, X } from 'lucide-react';
-import { loadGroceryItems, saveGroceryItems, type GroceryItem } from '../lib/firebase';
+import {
+  loadGroceryItems,
+  loadGroupProfile,
+  saveGroceryItems,
+  type GroceryItem,
+  type GroupProfile,
+} from '../lib/firebase';
 
 type GroceryListProps = {
   onClose: () => void;
   userId: string;
   groupId: string | null;
+  currentUserDisplayName: string;
   onOpenFamilyGroup: () => void;
 };
 
-export function GroceryList({ onClose, userId, groupId }: GroceryListProps) {
+const memberColors = [
+  'text-red-600 dark:text-red-400 border-l-red-500',
+  'text-blue-600 dark:text-blue-400 border-l-blue-500',
+  'text-green-600 dark:text-green-400 border-l-green-500',
+  'text-amber-600 dark:text-amber-400 border-l-amber-500',
+  'text-purple-600 dark:text-purple-400 border-l-purple-500',
+  'text-teal-600 dark:text-teal-400 border-l-teal-500',
+  'text-pink-600 dark:text-pink-400 border-l-pink-500',
+  'text-orange-600 dark:text-orange-400 border-l-orange-500',
+];
+
+export function GroceryList({ onClose, userId, groupId, currentUserDisplayName }: GroceryListProps) {
   const [items, setItems] = useState<GroceryItem[]>([]);
   const [newItemText, setNewItemText] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [groupProfile, setGroupProfile] = useState<GroupProfile | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -21,7 +40,11 @@ export function GroceryList({ onClose, userId, groupId }: GroceryListProps) {
   }, [groupId, userId]);
 
   const loadItems = async () => {
+    setLoading(true);
     try {
+      const currentGroup = groupId ? await loadGroupProfile(groupId) : null;
+      setGroupProfile(currentGroup);
+
       const savedItems = await loadGroceryItems(userId, groupId);
       setItems(savedItems.filter((item) => !item.checked));
     } catch (error) {
@@ -59,6 +82,9 @@ export function GroceryList({ onClose, userId, groupId }: GroceryListProps) {
       id: Date.now().toString() + Math.random().toString(),
       text: newItemText.trim(),
       checked: false,
+      createdByUserId: userId,
+      createdByDisplayName: currentUserDisplayName,
+      createdAt: new Date().toISOString(),
     };
 
     const updatedItems = [...items, newItem];
@@ -103,6 +129,22 @@ export function GroceryList({ onClose, userId, groupId }: GroceryListProps) {
       }
     };
   }, []);
+
+  const getAuthorClassName = (item: GroceryItem) => {
+    if (!groupProfile || !item.createdByUserId) {
+      return 'text-gray-900 dark:text-white border-l-gray-300 dark:border-l-gray-600';
+    }
+
+    if (item.createdByUserId === groupProfile.ownerId) {
+      return 'text-gray-900 dark:text-white border-l-gray-900 dark:border-l-white';
+    }
+
+    const memberIds = groupProfile.memberIds.filter((memberId) => memberId !== groupProfile.ownerId);
+    const memberIndex = memberIds.indexOf(item.createdByUserId);
+    const colorClass = memberColors[Math.max(0, memberIndex) % memberColors.length];
+
+    return colorClass;
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -160,7 +202,7 @@ export function GroceryList({ onClose, userId, groupId }: GroceryListProps) {
               {items.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                  className={`flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all border-l-4 ${getAuthorClassName(item)}`}
                 >
                   <button
                     onClick={() => toggleItem(item.id)}
@@ -169,8 +211,8 @@ export function GroceryList({ onClose, userId, groupId }: GroceryListProps) {
                   >
                     <div className="w-5 h-5 rounded-full bg-transparent group-hover:bg-green-500 transition-colors" />
                   </button>
-                  <p className="flex-1 text-gray-900 dark:text-white text-lg">
-                    {item.text}
+                  <p className={`flex-1 text-lg font-medium ${getAuthorClassName(item)}`}>
+                    {groupProfile && item.createdByDisplayName ? `${item.createdByDisplayName}: ${item.text}` : item.text}
                   </p>
                 </div>
               ))}

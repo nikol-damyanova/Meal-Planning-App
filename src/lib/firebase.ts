@@ -41,6 +41,9 @@ export type GroceryItem = {
   id: string;
   text: string;
   checked: boolean;
+  createdByUserId?: string | null;
+  createdByDisplayName?: string;
+  createdAt?: string;
 };
 
 export type AppUserProfile = {
@@ -166,6 +169,39 @@ function isPopupFallbackError(error: unknown) {
   );
 }
 
+function isCapacitorNativeRuntime() {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  const maybeCapacitor = (window as Window & {
+    Capacitor?: { isNativePlatform?: () => boolean };
+  }).Capacitor;
+
+  return Boolean(maybeCapacitor?.isNativePlatform?.());
+}
+
+function shouldUseRedirectFlow() {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return false;
+  }
+
+  if (isCapacitorNativeRuntime()) {
+    return false;
+  }
+
+  const isLocalHostOrigin =
+    window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  if (isLocalHostOrigin) {
+    return false;
+  }
+
+  return (
+    /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    navigator.maxTouchPoints > 1
+  );
+}
+
 function generateInviteCode() {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase();
 }
@@ -174,6 +210,11 @@ export async function signInWithGoogle(): Promise<UserCredential | null> {
   requireFirebaseConfiguration();
   if (!auth) {
     throw new Error('Firebase Auth is not available.');
+  }
+
+  if (shouldUseRedirectFlow()) {
+    await signInWithRedirect(auth, googleProvider);
+    return null;
   }
 
   try {

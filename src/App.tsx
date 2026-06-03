@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { onAuthStateChanged, type User } from 'firebase/auth';
+import { getRedirectResult, onAuthStateChanged, type User } from 'firebase/auth';
 import { Calendar, Home, List, Moon, Sun } from 'lucide-react';
 import { AuthScreen } from './components/AuthScreen';
 import { DayView } from './components/DayView';
@@ -54,58 +54,78 @@ export default function App() {
       localStorage.setItem('pendingInvite', inviteToken);
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (!firebaseUser) {
-        setUser(null);
-        setProfile(null);
-        setIsAuthenticated(false);
-        setView('landing');
-        setIsInitializing(false);
+    let unsubscribe = () => {};
+    let isCancelled = false;
+
+    const initializeAuth = async () => {
+      try {
+        await getRedirectResult(auth);
+      } catch (error) {
+        console.error('Failed to resolve Google redirect result:', error);
+      }
+
+      if (isCancelled) {
         return;
       }
 
-      try {
-        let currentProfile = await loadUserProfile(firebaseUser.uid);
-        if (!currentProfile) {
-          currentProfile = {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email ?? '',
-            displayName: firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'User',
-            photoURL: firebaseUser.photoURL ?? '',
-            groupId: null,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
+      unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        if (!firebaseUser) {
+          setUser(null);
+          setProfile(null);
+          setIsAuthenticated(false);
+          setView('landing');
+          setIsInitializing(false);
+          return;
         }
 
-        const pendingInvite = localStorage.getItem('pendingInvite');
-        if (pendingInvite) {
-          try {
-            await joinGroupByInviteCode(firebaseUser.uid, pendingInvite);
-            localStorage.removeItem('pendingInvite');
-            window.history.replaceState({}, '', window.location.pathname);
-            currentProfile = (await loadUserProfile(firebaseUser.uid)) ?? currentProfile;
-          } catch (error) {
-            console.error('Failed to join invited group:', error);
+        try {
+          let currentProfile = await loadUserProfile(firebaseUser.uid);
+          if (!currentProfile) {
+            currentProfile = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email ?? '',
+              displayName: firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'User',
+              photoURL: firebaseUser.photoURL ?? '',
+              groupId: null,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
           }
+
+          const pendingInvite = localStorage.getItem('pendingInvite');
+          if (pendingInvite) {
+            try {
+              await joinGroupByInviteCode(firebaseUser.uid, pendingInvite);
+              localStorage.removeItem('pendingInvite');
+              window.history.replaceState({}, '', window.location.pathname);
+              currentProfile = (await loadUserProfile(firebaseUser.uid)) ?? currentProfile;
+            } catch (error) {
+              console.error('Failed to join invited group:', error);
+            }
+          }
+
+          setUser(firebaseUser);
+          setProfile(currentProfile);
+          setIsAuthenticated(true);
+          setMealData(await loadMealData(firebaseUser.uid, currentProfile.groupId));
+          setView('menu');
+        } catch (error) {
+          console.error('Failed to restore auth state:', error);
+          setUser(firebaseUser);
+          setIsAuthenticated(true);
+          setView('menu');
+        } finally {
+          setIsInitializing(false);
         }
+      });
+    };
 
-        setUser(firebaseUser);
-        setProfile(currentProfile);
-        setIsAuthenticated(true);
-        setMealData(await loadMealData(firebaseUser.uid, currentProfile.groupId));
-        setView('menu');
-      } catch (error) {
-        console.error('Failed to restore auth state:', error);
-        setUser(firebaseUser);
-        setIsAuthenticated(true);
-        setView('menu');
-      } finally {
-        setIsInitializing(false);
-      }
-    });
+    void initializeAuth();
 
-    return () => unsubscribe();
+    return () => {
+      isCancelled = true;
+      unsubscribe();
+    };
   }, []);
 
   const handleAuthenticatedUser = async (firebaseUser: User) => {
@@ -344,6 +364,7 @@ export default function App() {
             onClose={() => setShowGroceryList(false)}
             userId={user?.uid ?? ''}
             groupId={profile?.groupId ?? null}
+            currentUserDisplayName={profile?.displayName ?? user?.displayName ?? user?.email ?? 'User'}
             onOpenFamilyGroup={() => {
               setShowGroceryList(false);
               setShowFamilyGroup(true);
@@ -480,6 +501,7 @@ export default function App() {
             onClose={() => setShowGroceryList(false)}
             userId={user?.uid ?? ''}
             groupId={profile?.groupId ?? null}
+            currentUserDisplayName={profile?.displayName ?? user?.displayName ?? user?.email ?? 'User'}
             onOpenFamilyGroup={() => {
               setShowGroceryList(false);
               setShowFamilyGroup(true);
