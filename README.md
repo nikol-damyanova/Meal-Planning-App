@@ -26,7 +26,7 @@ This is a code bundle for Meal Planning Mobile App. The original project is avai
 - Figma make
 - Github Copilot
   
-###Backend
+### Backend
 - Firebase serves as the primary backend platform and provides:
 Firebase Authentication for user management
 Cloud Firestore for real-time data storage
