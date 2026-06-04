@@ -4,10 +4,12 @@ About
 - It allows to connect multiple google accounts so household members can easily add items and make requests.
 
 Features
- - Use without an account
+ - Use without an account or
+ - Log in with email or google account
  - Connect multiple google accounts into a family group
  - Completely ad-free.
  - Night mode
+ - Web verion available
 
 Screenshots
 <img width="323" height="688" alt="Screenshot 2026-01-23 130705" src="https://github.com/user-attachments/assets/388e03d1-ad57-44e3-b95b-8065c1f2ac85" />
@@ -19,16 +21,18 @@ Screenshots
 
 This is a code bundle for Meal Planning Mobile App. The original project is available at https://www.figma.com/design/ljDP1QwOX7OfWMfwvMkl1h/Meal-Planning-Mobile-App.
 
-## Running the code
+## Tech Stack
+### Front-end
+- Figma make
+- Github Copilot
+  
+###Backend
+- Firebase serves as the primary backend platform and provides:
+Firebase Authentication for user management
+Cloud Firestore for real-time data storage
+Firebase Hosting for deployment and testing
+Data Model
 
-Run `npm i` to install the dependencies.
-
-Run `npm run dev` to start the development server.
-
-## Firebase setup
-
-Create a Firebase project, enable Email/Password and Google sign-in in Authentication, then copy the config values into a local `.env` file using `.env.example` as the template.
-
-## Deploying to Firebase Hosting
-
-Build the web app with `npm run build`, then deploy with `npm run deploy:web` from the project root. The Android app still comes from the same web bundle through Capacitor, so run `npm run copy:android` after building if you want to refresh the native app package.
+## How to run
+Install APK on android or use the web version:
+https://mealplanner-25b37.web.app/
